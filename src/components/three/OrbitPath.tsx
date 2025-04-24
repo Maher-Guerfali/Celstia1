@@ -11,7 +11,7 @@ interface OrbitPathProps {
 }
 
 const OrbitPath = ({ radius, color = '#555555', opacity = 0.4 }: OrbitPathProps) => {
-  const ref = useRef<THREE.Mesh>(null);
+  const ref = useRef<any>(null);
   const { showOrbitPaths } = useStore();
   
   // Create points for a circle
@@ -30,8 +30,8 @@ const OrbitPath = ({ radius, color = '#555555', opacity = 0.4 }: OrbitPathProps)
   // Subtle pulse animation
   useFrame(({ clock }) => {
     if (ref.current) {
-      const material = ref.current.material as THREE.Material;
-      if (material.opacity) {
+      const material = ref.current.material as THREE.LineBasicMaterial;
+      if (material && typeof material.opacity !== 'undefined') {
         material.opacity = opacity * (0.7 + Math.sin(clock.getElapsedTime() * 0.5) * 0.3);
       }
     }

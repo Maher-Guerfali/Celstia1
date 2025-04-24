@@ -1,32 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useStore } from './store';
 import Scene from './components/three/Scene';
 import Logo from './components/Logo';
 import Controls from './components/Controls';
 import PlanetInfo from './components/PlanetInfo';
-import { useStore } from './store';
-import { findCelestialBodyById } from './data/celestialBodies';
-import { CelestialBodyData } from './types';
+import NasaAttribution from './components/NasaAttribution';
+import { celestialBodies } from './data/celestialBodies';
 
 function App() {
-  const [planetData, setPlanetData] = useState<CelestialBodyData | null>(null);
-  const [showPlanetInfo, setShowPlanetInfo] = useState(false);
-  const selectedBody = useStore(state => state.selectedBody);
+  const initializeAudio = useStore(state => state.initializeAudio);
   
-  // Update planet info when selected body changes
+  // Run only once when component mounts
   useEffect(() => {
-    if (selectedBody) {
-      const data = findCelestialBodyById(selectedBody);
-      if (data) {
-        setPlanetData(data);
-        setShowPlanetInfo(true);
-      }
-    }
-  }, [selectedBody]);
-  
-  const handleClosePlanetInfo = () => {
-    setShowPlanetInfo(false);
-    // Don't reset selectedBody when closing the panel
-  };
+    const initialize = () => {
+      initializeAudio();
+      document.removeEventListener('click', initialize);
+    };
+    
+    document.addEventListener('click', initialize, { once: true });
+    return () => document.removeEventListener('click', initialize);
+  }, []);
+
+  const selectedBody = useStore(state => state.selectedBody);
+  const planetData = celestialBodies.find(body => body.id === selectedBody) || null;
   
   return (
     <div className="w-full h-screen relative">
@@ -37,11 +33,8 @@ function App() {
       <div className="ui-layer">
         <Logo />
         <Controls />
-        <PlanetInfo 
-          data={planetData} 
-          onClose={handleClosePlanetInfo} 
-          visible={showPlanetInfo} 
-        />
+        <PlanetInfo data={planetData} />
+        <NasaAttribution />
       </div>
     </div>
   );

@@ -6,10 +6,10 @@ import Tutorial from './Tutorial';
 const Controls = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const audioEnabled = useStore(state => state.audioEnabled);
-  const autoTourActive = useStore(state => state.autoTourActive);
+  
   const showOrbits = useStore(state => state.showOrbitPaths);
   
-  const { toggleAudio, toggleAutoTour, toggleOrbitPaths } = useStore();
+  const { toggleAudio, toggleOrbitPaths } = useStore();
 
   return (
     <>

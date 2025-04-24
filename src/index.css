@@ -40,6 +40,14 @@ body,
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
+.glassmorphic img {
+  transition: opacity 0.2s ease;
+}
+
+.glassmorphic:hover img {
+  opacity: 0.8;
+}
+
 .cosmic-glow {
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }

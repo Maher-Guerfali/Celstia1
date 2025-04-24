@@ -21,6 +21,10 @@ export interface Moon {
   name: string;
   texture: string;
   radius: number;
+  description: string,
+  mass: string,
+  age: string,
+  materials: string[],
   orbitRadius: number;
   orbitSpeed: number;
   rotationSpeed: number;

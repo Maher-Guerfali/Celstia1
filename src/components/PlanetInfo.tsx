@@ -1,13 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { PlanetInfoProps } from '../types';
+import { useStore } from '../store';
 
-const PlanetInfo = ({ data, onClose, visible }: PlanetInfoProps) => {
+const PlanetInfo = ({ data }: Omit<PlanetInfoProps, 'onClose' | 'visible'>) => {
+  const isInfoPanelVisible = useStore(state => state.isInfoPanelVisible);
+  const toggleInfoPanel = useStore(state => state.toggleInfoPanel);
+
   if (!data) return null;
 
   return (
     <AnimatePresence>
-      {visible && (
+      {isInfoPanelVisible && (
         <motion.div 
           className="fixed bottom-4 left-4 lg:left-8 max-w-md glassmorphic p-6 z-10"
           initial={{ y: 100, opacity: 0 }}
@@ -18,7 +22,7 @@ const PlanetInfo = ({ data, onClose, visible }: PlanetInfoProps) => {
           <div className="flex justify-between items-start mb-4">
             <h2 className="text-2xl font-medium cosmic-glow">{data.name}</h2>
             <button 
-              onClick={onClose}
+              onClick={() => toggleInfoPanel()}
               className="p-1 hover:bg-gray-800 rounded-full transition-colors"
             >
               <X size={20} />

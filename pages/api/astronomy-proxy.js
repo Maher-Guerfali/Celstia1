@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       method: req.method,
       headers: getAuthHeaders(),
-      body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
+      body: req.method === 'GET' ? JSON.stringify(req.body) : undefined,
     });
 
     const data = await response.json();

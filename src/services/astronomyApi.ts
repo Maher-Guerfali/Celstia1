@@ -26,7 +26,7 @@ export async function getBodyPositions(): Promise<PlanetaryPositions> {
   const time = now.toISOString().slice(11,19);
 
   const response = await fetch(buildProxyUrl('bodies/positions'), {
-    method: 'POST',
+    method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       observer: { latitude: 40.7128, longitude: -74.0060, elevation: 0 },

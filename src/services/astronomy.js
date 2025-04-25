@@ -1,9 +1,11 @@
-// src/services/astronomyApi.ts
+// Create a new file: pages/api/astronomy.js (for Next.js) or equivalent for your framework
+
 import CryptoJS from 'crypto-js';
 
-const API_URL = 'https://api.astronomyapi.com/api/v2';
-const APP_ID = 'd9f3944f-e472-49e7-8ae1-6e460076749c';
-const APP_SECRET = '93edfb2d3100068f369474bbe1ea7872ee7c730b4e83fcbcf6e9768de2c732451a68fd60ba3e0b9d6a91e9528c43d49634b12294b0d557fa86a264b2576c910fc658eceb1f3c4073335744af2575f7fa80b9aefa7e3c775d113a09dd392401c7ef14385243cd22c9285118104b81cbae';
+// Store these in environment variables, not in code
+const API_URL = process.env.ASTRONOMY_API_URL || 'https://api.astronomyapi.com/api/v2';
+const APP_ID = process.env.ASTRONOMY_APP_ID;
+const APP_SECRET = process.env.ASTRONOMY_APP_SECRET;
 
 // Create authentication hash
 const getAuthHeaders = () => {
@@ -12,58 +14,25 @@ const getAuthHeaders = () => {
   const signature = CryptoJS.enc.Base64.stringify(hash);
 
   return {
-    'Authorization': `Basic ${btoa(`${APP_ID}:${signature}`)}`,
+    'Authorization': `Basic ${Buffer.from(`${APP_ID}:${signature}`).toString('base64')}`,
     'X-Requested-With': 'XMLHttpRequest',
     'Date': date,
     'Content-Type': 'application/json'
   };
 };
 
-export interface CelestialPosition {
-  id: string;
-  name: string;
-  position: {
-    equatorial: {
-      rightAscension: { hours: number; minutes: number; seconds: number; },
-      declination: { degrees: number; minutes: number; seconds: number; },
-    },
-    horizonal: {
-      altitude: { degrees: number; minutes: number; seconds: number; },
-      azimuth: { degrees: number; minutes: number; seconds: number; },
-    },
-    constellation?: {
-      id: string;
-      name: string;
-    }
-  };
-  distance: number;
-  extraInfo?: {
-    magnitude?: number;
-    elongation?: number;
-  };
-}
-
-export interface PlanetaryPositions {
-  [key: string]: {
-    x: number;
-    y: number;
-    z: number;
-    distance: number;
-    datetime: string;
-  };
-}
-
-// Fetch positions of multiple bodies
-export const getBodyPositions = async (): Promise<PlanetaryPositions> => {
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
   try {
-    console.log('🔭 Fetching positions from Astronomy API...');
-    
     // Get current date and observer coordinates
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toISOString().split('T')[1].split('.')[0];
     
-    // Use fixed observer location (New York City for example)
+    // Use fixed observer location
     const latitude = 40.7128;
     const longitude = -74.0060;
     
@@ -99,9 +68,9 @@ export const getBodyPositions = async (): Promise<PlanetaryPositions> => {
     }
     
     // Convert to 3D coordinates
-    const positions: PlanetaryPositions = {};
+    const positions = {};
     
-    data.data.table.rows.forEach((row: any) => {
+    data.data.table.rows.forEach((row) => {
       const body = row.entry.name.toLowerCase();
       
       // Skip if data is missing
@@ -148,24 +117,9 @@ export const getBodyPositions = async (): Promise<PlanetaryPositions> => {
       };
     }
     
-    return positions;
+    res.status(200).json({ positions });
   } catch (error) {
-    console.error('❌ Error fetching from Astronomy API:', error);
-    throw error;
+    console.error('Error fetching from Astronomy API:', error);
+    res.status(500).json({ error: 'Failed to fetch astronomical data' });
   }
-};
-
-// Check if API is available and credentials are valid
-export const checkApiAvailability = async (): Promise<boolean> => {
-  try {
-    const response = await fetch(`${API_URL}/studio/star-chart`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    
-    return response.ok;
-  } catch (error) {
-    console.error('API availability check failed:', error);
-    return false;
-  }
-};
+}

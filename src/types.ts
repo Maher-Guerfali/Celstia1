@@ -1,23 +1,26 @@
 export interface CelestialBodyData {
   id: string;
   name: string;
-  mass: string;
-  age: string;
-  materials: string[];
-  description: string;
+  radius: number;
+  color?: string;
   texture?: string;
+  orbitRadius: number;
+  orbitSpeed: number;
+  rotationSpeed: number;
+  moons?: MoonData[];
+  hasRings?: boolean;
+  inclination?: number; // Added property for orbital inclination
+  materials?: string[];
+  age?: string;
+  description?: string;
+}
+
+export interface MoonData {
+  id: string;
+  name: string;
   radius: number;
   orbitRadius: number;
   orbitSpeed: number;
   rotationSpeed: number;
-  color?: string;
-  hasRings?: boolean;
-  isEasterEgg?: boolean;
-  moons?: CelestialBodyData[];
-  nasaId?: string; // Add NASA Horizons body ID
-}
-
-// For type safety, extend CelestialBodyData
-export interface Moon extends CelestialBodyData {
-  parentPlanet?: string;
+  texture?: string;
 }

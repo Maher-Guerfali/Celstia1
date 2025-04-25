@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { PlanetInfoProps } from '../types';
 import { useStore } from '../store';
 
-const PlanetInfo = ({ data }: Omit<PlanetInfoProps, 'onClose' | 'visible'>) => {
+const PlanetInfo = ({ data }: PlanetInfoProps) => {
   const isInfoPanelVisible = useStore(state => state.isInfoPanelVisible);
   const toggleInfoPanel = useStore(state => state.toggleInfoPanel);
 

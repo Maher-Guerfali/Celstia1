@@ -10,9 +10,10 @@ interface CelestialBodyProps {
   data: CelestialBodyData;
   isSelectable?: boolean;
   position?: [number, number, number];
+  onClick?: () => void;  // Add onClick prop
 }
 
-const CelestialBody = ({ data, isSelectable = true, position }: CelestialBodyProps) => {
+const CelestialBody = ({ data, isSelectable = true, position, onClick }: CelestialBodyProps) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -179,7 +180,12 @@ const CelestialBody = ({ data, isSelectable = true, position }: CelestialBodyPro
     <group ref={groupRef}>
       <mesh
         ref={meshRef}
-        onClick={() => isSelectable && setSelectedBody(data.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isSelectable && onClick) {
+            onClick();
+          }
+        }}
         onPointerOver={() => isSelectable && setHovered(true)}
         onPointerOut={() => isSelectable && setHovered(false)}
         receiveShadow={data.id !== 'sun'}
@@ -191,7 +197,7 @@ const CelestialBody = ({ data, isSelectable = true, position }: CelestialBodyPro
       {renderMoons()}
       {renderRings()}
     </group>
-  );
+  );  
 };
 
 export default CelestialBody;

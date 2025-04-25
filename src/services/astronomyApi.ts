@@ -1,7 +1,7 @@
 // src/services/astronomyApi.ts
 import CryptoJS from 'crypto-js';
 
-const API_URL = 'https://api.astronomyapi.com/api/v2';
+const API_URL = '/api/astronomy-proxy?path=bodies/positions';  // Your Vercel route
 const APP_ID = 'd9f3944f-e472-49e7-8ae1-6e460076749c';
 const APP_SECRET = '93edfb2d3100068f369474bbe1ea7872ee7c730b4e83fcbcf6e9768de2c732451a68fd60ba3e0b9d6a91e9528c43d49634b12294b0d557fa86a264b2576c910fc658eceb1f3c4073335744af2575f7fa80b9aefa7e3c775d113a09dd392401c7ef14385243cd22c9285118104b81cbae';
 
@@ -72,9 +72,11 @@ export const getBodyPositions = async (): Promise<PlanetaryPositions> => {
       'sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'
     ];
     
-    const response = await fetch(`${API_URL}/bodies/positions`, {
+    const response = await fetch(API_URL, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         observer: {
           latitude: latitude,
@@ -87,6 +89,7 @@ export const getBodyPositions = async (): Promise<PlanetaryPositions> => {
         time: time
       })
     });
+    
     
     if (!response.ok) {
       throw new Error(`API error: ${response.statusText}`);

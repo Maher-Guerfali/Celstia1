@@ -1,10 +1,12 @@
+// File: pages/api/astronomy-proxy.js
+
 import CryptoJS from 'crypto-js';
 
 const API_URL = 'https://api.astronomyapi.com/api/v2';
-const APP_ID = process.env.ASTRONOMY_APP_ID;  // Your API Key
-const APP_SECRET = process.env.ASTRONOMY_APP_SECRET;  // Your Secret
+const APP_ID = process.env.ASTRONOMY_APP_ID;
+const APP_SECRET = process.env.ASTRONOMY_APP_SECRET;
 
-// Function to generate authentication headers
+// Generate authentication headers for Astronomy API
 const getAuthHeaders = () => {
   const date = new Date().toUTCString();
   const hash = CryptoJS.HmacSHA256(date, APP_SECRET);
@@ -18,10 +20,17 @@ const getAuthHeaders = () => {
   };
 };
 
-// API handler for proxying requests to Astronomy API
+// API route handler: proxies requests to Astronomy API
 export default async function handler(req, res) {
-  const { path } = req.query; // This will get the path you need from the frontend
-  const url = `${API_URL}/${path}`;  // For example: /bodies/positions
+  const { path, ...query } = req.query; // path: e.g. 'bodies/positions' or 'bodies/positions/moon'
+  
+  // Build query string for GET requests
+  const queryString = Object.entries(query)
+    .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(val))}`)
+    .join('&');
+
+  // Construct full URL
+  const url = `${API_URL}/${path}${queryString ? `?${queryString}` : ''}`;
 
   try {
     const response = await fetch(url, {
@@ -33,6 +42,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {
+    console.error('Astronomy Proxy Error:', error);
     res.status(500).json({ error: error.message });
   }
 }

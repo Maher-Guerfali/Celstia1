@@ -8,7 +8,11 @@ import OrbitPath from './OrbitPath';
 import Stars from './Stars';
 import { celestialBodies } from '../../data/celestialBodies';
 import { useStore } from '../../store';
-import { getBodyPositions, checkApiAvailability, PlanetaryPositions } from '../../services/astronomyApi';
+import { 
+  getBodyPositions, 
+  checkApiAvailability, 
+  PlanetaryPositions 
+} from '../../services/astronomyApi';
 
 interface SolarSystemProps {
   onLoaded: () => void;
@@ -310,15 +314,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
             <planeGeometry args={[20, 5]} />
             <meshBasicMaterial color="red" transparent opacity={0.7} />
           </mesh>
-          <text
-            position={[0, 0, 0.1]}
-            color="white"
-            fontSize={0.5}
-            anchorX="center"
-            anchorY="middle"
-          >
-            API Error - Using Fallback Data
-          </text>
+        
         </group>
       )}
     </>

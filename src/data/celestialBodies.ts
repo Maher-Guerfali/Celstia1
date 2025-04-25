@@ -162,7 +162,7 @@ export const celestialBodies: CelestialBodyData[] = [
     orbitRadius: 84,
     orbitSpeed: 0.0004,
     rotationSpeed: 0.003,
-    isEasterEgg: true
+
   },
   {
     id: 'black_hole',
@@ -176,7 +176,7 @@ export const celestialBodies: CelestialBodyData[] = [
     orbitRadius: 120,
     orbitSpeed: 0,
     rotationSpeed: 0.01,
-    isEasterEgg: true,
+    
     color: '#DD0000'
   }
 ];

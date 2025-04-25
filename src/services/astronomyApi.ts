@@ -136,3 +136,31 @@ export const getBodyPositionHistory = async (
   const data = await response.json();
   return data.data.rows; // Return all rows containing position history
 }
+
+// Add this function to check API availability
+export async function checkApiAvailability(): Promise<boolean> {
+  try {
+    // Try to fetch the sun's position as a simple availability check
+    const testParams = {
+      latitude: 0,
+      longitude: 0,
+      elevation: 0,
+      bodies: ['sun'],
+      from_date: new Date().toISOString().slice(0,10),
+      to_date: new Date().toISOString().slice(0,10),
+      time: new Date().toISOString().slice(11,19)
+    };
+
+    const response = await fetch(buildProxyUrl('bodies/positions', testParams), {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    console.log('API availability check response:', response.status);
+    return response.ok;
+
+  } catch (error) {
+    console.error('API availability check failed:', error);
+    return false;
+  }
+}

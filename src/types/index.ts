@@ -30,8 +30,7 @@ export interface Moon {
   rotationSpeed: number;
 }
 
+// Update PlanetInfoProps to match the simplified version we're using
 export interface PlanetInfoProps {
   data: CelestialBodyData | null;
-  onClose: () => void;
-  visible: boolean;
 }

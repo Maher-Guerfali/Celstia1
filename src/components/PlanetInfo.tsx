@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { PlanetInfoProps } from '../types';
 import { useStore } from '../store';
 
-const PlanetInfo = ({ data }: PlanetInfoProps) => {
+const PlanetInfo = ({ data }: Omit<PlanetInfoProps, 'onClose' | 'visible'>) => {
   const isInfoPanelVisible = useStore(state => state.isInfoPanelVisible);
   const toggleInfoPanel = useStore(state => state.toggleInfoPanel);
 
@@ -44,7 +44,7 @@ const PlanetInfo = ({ data }: PlanetInfoProps) => {
             <div>
               <p className="text-gray-400 mb-1">Composition</p>
               <ul className="list-disc list-inside pl-2 text-sm">
-                {data.materials.map((material, index) => (
+                {data.materials.map((material: string, index: number) => (
                   <li key={index}>{material}</li>
                 ))}
               </ul>

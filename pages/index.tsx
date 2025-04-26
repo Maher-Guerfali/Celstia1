@@ -15,6 +15,7 @@ const Scene = dynamic(() => import('../src/components/three/Scene'), {
 export default function Home() {
   const initializeAudio = useStore(state => state.initializeAudio);
   const selectedBody = useStore(state => state.selectedBody);
+  const clearSelectedBody = useStore(state => state.clearSelectedBody);
   const planetData = celestialBodies.find(body => body.id === selectedBody) || null;
   
   useEffect(() => {
@@ -27,8 +28,16 @@ export default function Home() {
     return () => document.removeEventListener('click', initialize);
   }, [initializeAudio]);
 
+  // Handle background clicks (outside of the 3D scene)
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    // Only handle direct clicks on the main container
+    if (e.target === e.currentTarget && selectedBody) {
+      clearSelectedBody();
+    }
+  };
+
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen relative" onClick={handleBackgroundClick}>
       <Scene />
       <div className="absolute inset-0 pointer-events-none">
         <div className="pointer-events-auto">

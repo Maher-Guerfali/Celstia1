@@ -1,5 +1,9 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+// SolarSystem.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// SolarSystem.tsx
+
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
@@ -14,79 +18,35 @@ interface SolarSystemProps {
 }
 
 const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
-  const controlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
+  const controlsRef = useRef<any>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
-  const { camera } = useThree();
-  const { selectedBody, setSelectedBody } = useStore();
-  const [planetPositions, setPlanetPositions] = useState<{ [key: string]: { x: number; y: number; z: number; distance: number } }>({});
+  const { camera, gl } = useThree();
+
+  const selectedBody = useStore((s) => s.selectedBody);
+  const setSelectedBody = useStore((s) => s.setSelectedBody);
+  const clearSelectedBody = useStore((s) => s.clearSelectedBody);
+
+  const [planetPositions, setPlanetPositions] = useState<
+    Record<string, { x: number; y: number; z: number; distance: number }>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isZooming, setIsZooming] = useState(false);
-
-  // Function to calculate planet positions based on time
-  const calculatePlanetPositions = useCallback(() => {
-    const now = new Date();
-    const baseTime = new Date('2000-01-01T00:00:00Z').getTime();
-    const elapsedTime = (now.getTime() - baseTime) / (1000 * 60 * 60 * 24); // Days since 2000
-
-    // Use current hour to add variation to the view based on time of day
-    const hourFactor = (now.getHours() % 12) / 12; // 0-1 based on hour (resets at noon/midnight)
-    
-    const positions: { [key: string]: { x: number; y: number; z: number; distance: number } } = {};
-
-    celestialBodies.forEach((body) => {
-      if (body.id === 'sun') {
-        positions[body.id] = { x: 0, y: 0, z: 0, distance: 0 };
-        return;
-      }
-
-      // Calculate angle based on orbital period and current time
-      const orbitPeriod = getOrbitPeriod(body.id);
-      const angle = (2 * Math.PI * elapsedTime / orbitPeriod) + (hourFactor * Math.PI / 6);
-      
-      // Calculate eccentricity for more realistic orbits
-      const eccentricity = getEccentricity(body.id);
-      
-      // Calculate position with slight inclination and eccentricity
-      const distance = body.orbitRadius * (1 - eccentricity * Math.cos(angle));
-      const x = Math.cos(angle) * distance;
-      const z = Math.sin(angle) * distance;
-      
-      // Add inclination to the orbit
-      const inclination = getInclination(body.id);
-      const y = Math.sin(angle) * distance * Math.sin(inclination);
-
-      positions[body.id] = {
-        x,
-        y,
-        z,
-        distance
-      };
-    });
-
-    return positions;
-  }, []);
-
-  // Helper function to get orbital period in Earth days
-  const getOrbitPeriod = (bodyId: string): number => {
-    const periods: { [key: string]: number } = {
-      mercury: 88,    // 88 Earth days
-      venus: 225,     // 225 Earth days
-      earth: 365.25,  // 365.25 Earth days (1 year)
-      mars: 687,      // 687 Earth days
-      jupiter: 4333,  // 11.86 Earth years
-      saturn: 10759,  // 29.46 Earth years
-      uranus: 30687,  // 84.01 Earth years
-      neptune: 60190, // 164.8 Earth years
-      pluto: 90560,   // 248 Earth years
-      black_hole: 500000 // Fictional value
-    };
-    
-    return periods[bodyId] || 365.25; // Default to Earth's period if not found
-  };
-
-  // Helper function to get orbital eccentricity
-  const getEccentricity = (bodyId: string): number => {
-    const eccentricities: { [key: string]: number } = {
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Use useMemo for constants that don't change
+  const { periods, eccentricities, inclinations } = useMemo(() => ({
+    periods: {
+      mercury: 88,
+      venus: 225,
+      earth: 365.25,
+      mars: 687,
+      jupiter: 4333,
+      saturn: 10759,
+      uranus: 30687,
+      neptune: 60190,
+      pluto: 90560,
+      black_hole: 500000,
+    },
+    eccentricities: {
       mercury: 0.205,
       venus: 0.007,
       earth: 0.017,
@@ -94,167 +54,273 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
       jupiter: 0.049,
       saturn: 0.057,
       uranus: 0.046,
-      neptune: 0.010,
+      neptune: 0.01,
       pluto: 0.248,
-      black_hole: 0.7 // Fictional value
-    };
-    
-    return eccentricities[bodyId] || 0.01; // Default to low eccentricity if not found
-  };
-
-  // Helper function to get orbital inclination in radians
-  const getInclination = (bodyId: string): number => {
-    const inclinations: { [key: string]: number } = {
-      mercury: 7.0 * Math.PI / 180,
-      venus: 3.4 * Math.PI / 180,
-      earth: 0.0 * Math.PI / 180,
-      mars: 1.9 * Math.PI / 180,
-      jupiter: 1.3 * Math.PI / 180,
-      saturn: 2.5 * Math.PI / 180,
-      uranus: 0.8 * Math.PI / 180,
-      neptune: 1.8 * Math.PI / 180,
-      pluto: 17.2 * Math.PI / 180,
-      black_hole: 45 * Math.PI / 180 // Fictional value
-    };
-    
-    return inclinations[bodyId] || 0; // Default to no inclination if not found
-  };
-
-  // Function to zoom to a planet - wrapped in useCallback to avoid dependency issues
-  const zoomToPlanet = useCallback((bodyId: string) => {
-    const body = celestialBodies.find((b) => b.id === bodyId);
-    const pos = planetPositions[bodyId];
-    
-    if (!body || !pos) return;
-    
-    setIsZooming(true);
-    
-    // Disable controls during zoom
-    if (controlsRef.current) {
-      controlsRef.current.enabled = false;
+      black_hole: 0.7,
+    },
+    inclinations: {
+      mercury: (7.0 * Math.PI) / 180,
+      venus: (3.4 * Math.PI) / 180,
+      earth: 0,
+      mars: (1.9 * Math.PI) / 180,
+      jupiter: (1.3 * Math.PI) / 180,
+      saturn: (2.5 * Math.PI) / 180,
+      uranus: (0.8 * Math.PI) / 180,
+      neptune: (1.8 * Math.PI) / 180,
+      pluto: (17.2 * Math.PI) / 180,
+      black_hole: (45 * Math.PI) / 180,
     }
+  }), []);
+
+  // Store previous time to use delta for smooth animations
+  const prevTimeRef = useRef<number>(Date.now());
+
+  const calculatePlanetPositions = useCallback(() => {
+    const now = new Date();
+    const daysSince2000 =
+      (now.getTime() - new Date('2000-01-01T00:00:00Z').getTime()) /
+      (1000 * 60 * 60 * 24);
+    const hourFactor = (now.getHours() % 12) / 12;
+    const positions: Record<
+      string,
+      { x: number; y: number; z: number; distance: number }
+    > = {};
+  
+    celestialBodies.forEach((body) => {
+      if (body.id === 'sun') {
+        positions[body.id] = { x: 0, y: 0, z: 0, distance: 0 };
+        return;
+      }
+      
+      // Fix: Safely access period values with fallbacks
+      const period = periods[body.id as keyof typeof periods] ?? periods.earth;
+      const ecc = eccentricities[body.id as keyof typeof eccentricities] ?? 0.01;
+      const inc = inclinations[body.id as keyof typeof inclinations] ?? 0;
+      
+      const angle = (2 * Math.PI * daysSince2000) / period + hourFactor * (Math.PI / 6);
+  
+      const dist = body.orbitRadius * (1 - ecc * Math.cos(angle));
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+      const y = Math.sin(angle) * dist * Math.sin(inc);
+  
+      positions[body.id] = { x, y, z, distance: dist };
+    });
+  
+    return positions;
+  }, [periods, eccentricities, inclinations]);
+
+  // Smooth camera focus transitions
+  const focusOnPlanet = useCallback(
+    (id: string | null) => {
+      if (!id || !controlsRef.current) return;
+      const pos = planetPositions[id];
+      if (!pos) return;
+      
+      setIsAnimating(true);
+      
+      // Disable controls during animation transition
+      if (controlsRef.current.enabled) {
+        controlsRef.current.enabled = false;
+      }
+      
+      // Use GSAP for smoother animations with onUpdate to keep controls synced
+      gsap.to(controlsRef.current.target, {
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
+        duration: 1.5,
+        ease: "power3.inOut", // Smoother easing function
+        onUpdate: () => {
+          // Force update controls during animation for smoother camera movement
+          if (controlsRef.current) {
+            controlsRef.current.update();
+          }
+        },
+        onComplete: () => {
+          if (controlsRef.current) {
+            // Re-enable controls only when animation is complete
+            controlsRef.current.enabled = true;
+          }
+          setIsAnimating(false);
+        },
+      });
+    },
+    [planetPositions]
+  );
+
+  // Reset camera to center view
+  const resetCamera = useCallback(() => {
+    if (!controlsRef.current) return;
     
-    const target = new THREE.Vector3(pos.x, pos.y, pos.z);
+    // Disable controls during transition
+    controlsRef.current.enabled = false;
     
-    // Calculate appropriate camera distance based on planet size
-    const distanceFactor = body.id === 'sun' ? 5 : body.radius < 1 ? 10 : 3;
-    const zoomDistance = body.radius * distanceFactor + 5;
-    
-    // Create a slightly offset viewing angle for more dynamic zoom
-    const randomAngle = Math.random() * Math.PI * 2;
-    const randomHeight = (Math.random() * 0.4) + 0.2; // Between 0.2 and 0.6
-    
-    const camOffset = new THREE.Vector3(
-      Math.cos(randomAngle) * zoomDistance,
-      zoomDistance * randomHeight, // Slightly above the planet
-      Math.sin(randomAngle) * zoomDistance
-    );
-    
-    const newCamPos = target.clone().add(camOffset);
-    
-    // Animate camera position and target
-    gsap.to(camera.position, {
-      x: newCamPos.x,
-      y: newCamPos.y,
-      z: newCamPos.z,
-      duration: 2.5,
-      ease: "power2.inOut",
+    // Animate camera return to center
+    gsap.to(controlsRef.current.target, {
+      x: 0,
+      y: 0,
+      z: 0,
+      duration: 1.5,
+      ease: "power3.inOut",
+      onUpdate: () => {
+        // Keep controls updated during animation
+        if (controlsRef.current) {
+          controlsRef.current.update();
+        }
+      },
       onComplete: () => {
-        // Re-enable controls after zoom completes
         if (controlsRef.current) {
           controlsRef.current.enabled = true;
         }
-        setIsZooming(false);
-      }
+      },
     });
-    
-    if (controlsRef.current) {
-      gsap.to(controlsRef.current.target, {
-        x: target.x,
-        y: target.y,
-        z: target.z,
-        duration: 2.2,
-        ease: "power2.inOut"
-      });
-    }
-  }, [camera, planetPositions]);
-  
-  // Handle planet selection
-  useEffect(() => {
-    if (!selectedBody) return;
-    zoomToPlanet(selectedBody);
-  }, [selectedBody, zoomToPlanet]);
+  }, []);
 
+  // Initialize and set up position calculation interval
   useEffect(() => {
-    console.log('Initializing planet positions');
+    // Initial calculation
     setPlanetPositions(calculatePlanetPositions());
     setIsLoading(false);
     onLoaded();
+    
+    // Create a throttled interval for position updates
+    // Update every 500ms instead of 100ms for better performance
+    const iv = setInterval(() => {
+      setPlanetPositions((current) => {
+        const updated = calculatePlanetPositions();
+        
+        // Only update positions if there's a meaningful change
+        const hasSignificantChange = Object.keys(updated).some(id => {
+          if (!current[id]) return true;
+          
+          const dx = Math.abs(current[id].x - updated[id].x);
+          const dy = Math.abs(current[id].y - updated[id].y);
+          const dz = Math.abs(current[id].z - updated[id].z);
+          
+          // Only update if position changed by more than threshold units
+          return dx > 0.01 || dy > 0.01 || dz > 0.01;
+        });
+        
+        return hasSignificantChange ? updated : current;
+      });
+    }, 500);
+    
+    return () => clearInterval(iv);
+  }, [calculatePlanetPositions, onLoaded]);
 
-    // Update positions more frequently (every 100ms) for smoother animation
-    const interval = setInterval(() => {
-      setPlanetPositions(calculatePlanetPositions());
-    }, 100);
+  // React to body selection changes
+  useEffect(() => {
+    if (selectedBody) {
+      focusOnPlanet(selectedBody);
+    } else {
+      resetCamera();
+    }
+  }, [selectedBody, focusOnPlanet, resetCamera]);
 
-    return () => clearInterval(interval);
-  }, [onLoaded, calculatePlanetPositions]);
-
-  // Allow manual camera control if not zooming
+  // Frame updates - improve with delta time for smoother animations
   useFrame(() => {
-    if (isZooming && controlsRef.current) {
+    // Only update controls if not in an animation transition
+    if (controlsRef.current && !isAnimating) {
       controlsRef.current.update();
     }
+    
+    // Update time reference for next frame
+    prevTimeRef.current = Date.now();
   });
-
+  const maxOrbitRadius = useMemo(() => {
+    let max = 0;
+    celestialBodies.forEach(body => {
+      if (body.orbitRadius > max) {
+        max = body.orbitRadius;
+      }
+    });
+    return max;
+  }, []);
+  // Background click handler to deselect current body
+  const handleBg = (e: ThreeEvent<MouseEvent>) => {
+    if (selectedBody) {
+      clearSelectedBody();
+      e.stopPropagation();
+    }
+  };
+  //const cameraDistance = maxOrbitRadius * 0.8;
+  const cameraNear = 0.1;
+  const cameraFar = maxOrbitRadius * 4;
   if (isLoading) return <primitive object={new THREE.Object3D()} />;
 
   return (
     <>
       <Stars />
+
       <PerspectiveCamera
-        ref={cameraRef}
-        makeDefault
-        position={[0, 200, 500]}
-        fov={45}
-      />
+  ref={cameraRef}
+  makeDefault
+  position={[0, maxOrbitRadius * 0.3, maxOrbitRadius * 0.6]}
+  fov={50}
+  near={cameraNear}
+  far={cameraFar}
+/>
+
+      {/* Optimized OrbitControls for smoother movement */}
       <OrbitControls
-        ref={controlsRef}
-        enableDamping
-        dampingFactor={0.05}
-        rotateSpeed={0.5}
-        zoomSpeed={0.5}
-        minDistance={5} // Reduced to allow closer zoom
-        maxDistance={1000}
-        target={[0, 0, 0]}
-      />
+      ref={controlsRef}
+      args={[camera, gl.domElement]}
+      enableDamping={true}
+      dampingFactor={0.05}
+      rotateSpeed={0.5}
+      panSpeed={0.8}
+      zoomSpeed={1.2}
+      enableZoom={true}
+      enablePan={true}
+      minDistance={maxOrbitRadius * 0.05}  // Allow closer zoom
+      maxDistance={maxOrbitRadius * 2}     // Limit max zoom out
+      target={[0, 0, 0]}
+      makeDefault
+    />
+
       <ambientLight intensity={0.5} />
       <pointLight position={[0, 0, 0]} intensity={1.5} distance={1000} decay={2} castShadow />
-      {celestialBodies.map((body, i) => {
-        const pos = planetPositions[body.id];
-        const worldPos: [number, number, number] = pos
-          ? [pos.x, pos.y, pos.z]
-          : [0, 0, 0];
-        return (
-          <group key={body.id}>
-            {i > 0 && (
-              <OrbitPath
-                radius={pos?.distance || body.orbitRadius}
-                color={body.id === selectedBody ? '#fff' : '#555'}
-                opacity={body.id === selectedBody ? 0.6 : 0.4}
-                inclination={getInclination(body.id)}
-                eccentricity={getEccentricity(body.id)}
+
+      {/* Larger invisible backplane for better click detection */}
+      <mesh position={[0, 0, -500]} onClick={handleBg}>
+        <planeGeometry args={[10000, 10000]} />
+        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Celestial bodies with optimized rendering */}
+      <group>
+        {celestialBodies.map((body, i) => {
+          const pos = planetPositions[body.id] ?? {
+            x: 0,
+            y: 0,
+            z: 0,
+            distance: body.orbitRadius,
+          };
+          
+          return (
+            <group key={body.id}>
+              {/* Only render orbit paths for planets (not sun) */}
+              {i > 0 && (
+                <OrbitPath
+                  radius={pos.distance}
+                  color="#555"
+                  opacity={0.4}
+                  inclination={Math.asin(pos.y / pos.distance)}
+                  eccentricity={1 - pos.distance / body.orbitRadius}
+                />
+              )}
+              <CelestialBody
+                data={body}
+                position={[pos.x, pos.y, pos.z]}
+                usingRealTime
+                isHighlighted={selectedBody === body.id}
+                onClick={() => setSelectedBody(body.id)}
               />
-            )}
-            <CelestialBody
-              data={body}
-              position={worldPos}
-              usingRealTime={true}
-              onClick={() => setSelectedBody(body.id)}
-              isHighlighted={body.id === selectedBody}
-            />
-          </group>
-        );
-      })}
+            </group>
+          );
+        })}
+      </group>
     </>
   );
 };

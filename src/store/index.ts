@@ -7,12 +7,13 @@ interface StoreState {
   previouslySelectedBody: string | null;
   isInfoPanelVisible: boolean;
   audioEnabled: boolean;
-  audioLoaded: boolean; // Add this property
+  audioLoaded: boolean;
   autoTourActive: boolean;
   showOrbitPaths: boolean;
   ambientSound: Howl | null;
   currentPlanetPositions: { [key: string]: Vector3 };
   setSelectedBody: (id: string | null) => void;
+  clearSelectedBody: () => void; // New function to clear selection
   toggleInfoPanel: () => void;
   toggleAudio: () => void;
   toggleAutoTour: () => void;
@@ -26,7 +27,7 @@ export const useStore = create<StoreState>((set, get) => ({
   previouslySelectedBody: null,
   isInfoPanelVisible: false,
   audioEnabled: true,
-  audioLoaded: false, // Add initial value
+  audioLoaded: false,
   autoTourActive: false,
   showOrbitPaths: true,
   ambientSound: null,
@@ -37,6 +38,13 @@ export const useStore = create<StoreState>((set, get) => ({
     selectedBody: id,
     isInfoPanelVisible: id !== null // Show panel when selecting a body
   })),
+  
+  // New function to clear selection and hide panel
+  clearSelectedBody: () => set({ 
+    previouslySelectedBody: get().selectedBody,
+    selectedBody: null,
+    isInfoPanelVisible: false
+  }),
   
   toggleInfoPanel: () => set((state) => ({ 
     isInfoPanelVisible: !state.isInfoPanelVisible,

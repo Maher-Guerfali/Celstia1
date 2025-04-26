@@ -47,51 +47,54 @@ export const useStore = create<StoreState>((set, get) => ({
     const { ambientSound, audioLoaded } = get();
     
     if (!ambientSound && !audioLoaded) {
-      try {
-        const sound = new Howl({
-          src: ['/intersstler.mp3'],
-          loop: true,
-          volume: 0.2,
-          preload: true,
-          html5: true,
-          autoplay: false, // Disable autoplay initially
-          onload: () => {
-            console.log('Audio loaded successfully');
-            set({ 
-              ambientSound: sound,
-              audioLoaded: true,
-              audioEnabled: true
-            });
+      // Initialize audio in the background
+      setTimeout(() => {
+        try {
+          const sound = new Howl({
+            src: ['/intersstler.mp3'],
+            loop: true,
+            volume: 0.2,
+            preload: true,
+            html5: true,
+            autoplay: false,
+            onload: () => {
+              console.log('Audio loaded successfully');
+              set({ 
+                ambientSound: sound,
+                audioLoaded: true,
+                audioEnabled: true
+              });
 
-            // Single event listener for first interaction
-            const startAudio = () => {
-              if (!sound.playing()) {
-                sound.play();
-              }
-              document.removeEventListener('click', startAudio);
-              document.removeEventListener('touchstart', startAudio);
-            };
+              // Single event listener for first interaction
+              const startAudio = () => {
+                if (!sound.playing()) {
+                  sound.play();
+                }
+                document.removeEventListener('click', startAudio);
+                document.removeEventListener('touchstart', startAudio);
+              };
 
-            document.addEventListener('click', startAudio, { once: true });
-            document.addEventListener('touchstart', startAudio, { once: true });
-          },
-          onloaderror: (id, error) => {
-            console.error('Audio loading error:', error);
-            set({ audioLoaded: false });
-          },
-          onplayerror: (id, error) => {
-            console.error('Audio play error:', error);
-            set({ audioEnabled: false });
-          }
-        });
+              document.addEventListener('click', startAudio, { once: true });
+              document.addEventListener('touchstart', startAudio, { once: true });
+            },
+            onloaderror: (id, error) => {
+              console.error('Audio loading error:', error);
+              set({ audioLoaded: false });
+            },
+            onplayerror: (id, error) => {
+              console.error('Audio play error:', error);
+              set({ audioEnabled: false });
+            }
+          });
 
-        // Store the sound instance immediately
-        set({ ambientSound: sound });
+          // Store the sound instance immediately
+          set({ ambientSound: sound });
 
-      } catch (error) {
-        console.error('Error initializing audio:', error);
-        set({ audioLoaded: false });
-      }
+        } catch (error) {
+          console.error('Error initializing audio:', error);
+          set({ audioLoaded: false });
+        }
+      }, 0); // Use setTimeout to run in the next tick
     }
   },
 

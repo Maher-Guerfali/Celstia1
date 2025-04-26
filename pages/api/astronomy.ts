@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { celestialBodies } from '../../src/data/celestialBodies';
+import { CelestialBodyData } from '../../src/types';
 
 // Type definitions
 export interface BodyPosition {
@@ -143,12 +145,20 @@ export const checkApiAvailability = async (): Promise<boolean> => {
         to_date: today,
         time: '12:00:00'
       },
-      timeout: 5000 // 5 second timeout for availability check
+      timeout: 2000 // Reduced timeout to 2 seconds
     });
     
     return response.status === 200;
   } catch (error) {
-    console.warn('Astronomy API check failed:', error);
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        console.warn('Astronomy API check timed out');
+      } else {
+        console.warn('Astronomy API check failed:', error.message);
+      }
+    } else {
+      console.warn('Astronomy API check failed:', error);
+    }
     return false;
   }
 };
@@ -272,4 +282,55 @@ export const getBodyDetails = async (bodyId: string): Promise<BodyDetailsRespons
     console.error(`Error fetching details for ${bodyId}:`, error);
     throw error;
   }
+};
+
+/**
+ * Generates realistic fallback positions based on orbital periods
+ */
+export const generateFallbackPositions = (): PlanetaryPositions => {
+  const positions: PlanetaryPositions = {};
+  const now = new Date();
+  const baseTime = new Date('2000-01-01T00:00:00Z').getTime();
+  const elapsedTime = (now.getTime() - baseTime) / (1000 * 60 * 60 * 24); // Days since 2000
+
+  // Orbital periods in days (approximate)
+  const orbitalPeriods: { [key: string]: number } = {
+    mercury: 88,
+    venus: 225,
+    earth: 365,
+    mars: 687,
+    jupiter: 4333,
+    saturn: 10759,
+    uranus: 30687,
+    neptune: 60190
+  };
+
+  // Generate positions for each body
+  celestialBodies.forEach((body: CelestialBodyData) => {
+    if (body.id === 'sun') {
+      positions[body.id] = {
+        x: 0,
+        y: 0,
+        z: 0,
+        distance: 0,
+        datetime: now.toISOString()
+      };
+    } else {
+      const period = orbitalPeriods[body.id] || 365;
+      const angle = (2 * Math.PI * elapsedTime) / period;
+      const x = Math.cos(angle) * body.orbitRadius;
+      const z = Math.sin(angle) * body.orbitRadius;
+      const y = Math.sin(body.inclination || 0) * body.orbitRadius;
+      
+      positions[body.id] = {
+        x,
+        y,
+        z,
+        distance: body.orbitRadius,
+        datetime: now.toISOString()
+      };
+    }
+  });
+
+  return positions;
 };

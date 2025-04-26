@@ -12,6 +12,7 @@ import {
   getBodyPositions,
   checkApiAvailability,
   PlanetaryPositions,
+  generateFallbackPositions,
 } from '../../../pages/api/astronomy';
 
 interface SolarSystemProps {
@@ -25,7 +26,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const { selectedBody, setSelectedBody } = useStore();
   const [planetPositions, setPlanetPositions] = useState<PlanetaryPositions>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [apiAvailable, setApiAvailable] = useState(true);
+  const [apiAvailable, setApiAvailable] = useState(false);
   const updateIntervalRef = useRef<number>();
   const lastValidTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const lastValidCameraPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 30, 80));
@@ -74,28 +75,35 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   }, [apiAvailable, getFallbackPositions]);
 
   useEffect(() => {
-    (async () => {
-      const ok = await checkApiAvailability();
-      setApiAvailable(ok);
-      if (!ok) {
-        setPlanetPositions(getFallbackPositions());
-        setIsLoading(false);
-        onLoaded();
-      }
-    })();
-  }, [getFallbackPositions, onLoaded]);
+    console.log('Initializing with fallback positions');
+    setPlanetPositions(generateFallbackPositions());
+    setIsLoading(false);
+    onLoaded();
+  }, [onLoaded]);
 
   useEffect(() => {
-    if (!apiAvailable) return;
     (async () => {
-      setIsLoading(true);
-      await updatePlanetPositions();
-      setIsLoading(false);
-      onLoaded();
-      updateIntervalRef.current = window.setInterval(updatePlanetPositions, 2 * 60 * 60 * 1000);
+      try {
+        console.log('Checking API availability in background...');
+        const ok = await checkApiAvailability();
+        console.log('API available:', ok);
+        setApiAvailable(ok);
+        if (ok) {
+          console.log('Fetching planet positions from API...');
+          const apiPositions = await getBodyPositions();
+          setPlanetPositions(apiPositions);
+          updateIntervalRef.current = window.setInterval(async () => {
+            const newPositions = await getBodyPositions();
+            setPlanetPositions(newPositions);
+          }, 2 * 60 * 60 * 1000);
+        }
+      } catch (error) {
+        console.error('Error with API:', error);
+        setApiAvailable(false);
+      }
     })();
     return () => clearInterval(updateIntervalRef.current);
-  }, [apiAvailable, onLoaded, updatePlanetPositions]);
+  }, []);
 
   useFrame((_, delta) => {
     if (!isLoading && !selectedBody) {

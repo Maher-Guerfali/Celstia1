@@ -10,7 +10,7 @@ const Logo = () => {
   };
 
   return (
-    <div className="fixed top-4 right-4 flex gap-4">
+    <div className="fixed top-4 left-4 flex gap-4 z-50">
       <div className="relative group">
         <button 
           onClick={handleWebsiteClick}

@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 :root {
   --color-text-primary: rgb(240, 240, 246);
@@ -19,7 +19,7 @@
 
 html,
 body,
-#root {
+#__next {
   width: 100%;
   height: 100vh;
   margin: 0;
@@ -28,7 +28,15 @@ body,
   background-color: #000;
   color: var(--color-text-primary);
   font-family: 'Space Grotesk', sans-serif;
-  position: relative;
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 .glassmorphic {

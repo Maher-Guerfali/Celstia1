@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Music, PauseCircle, PlayCircle, Orbit, Info } from 'lucide-react';
+import { Music, Orbit, Info } from 'lucide-react';
 import { useStore } from '../store';
 import Tutorial from './Tutorial';
 

@@ -8,12 +8,7 @@ import OrbitPath from './OrbitPath';
 import Stars from './Stars';
 import { celestialBodies } from '../../data/celestialBodies';
 import { useStore } from '../../store';
-import {
-  getBodyPositions,
-  checkApiAvailability,
-  PlanetaryPositions,
-  generateFallbackPositions,
-} from '../../../pages/api/astronomy';
+import { PlanetaryPositions, generateFallbackPositions } from '../../../pages/api/astronomy';
 
 interface SolarSystemProps {
   onLoaded: () => void;
@@ -26,48 +21,67 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const { selectedBody, setSelectedBody } = useStore();
   const [planetPositions, setPlanetPositions] = useState<PlanetaryPositions>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [usingApiPositions, setUsingApiPositions] = useState(false);
   const updateIntervalRef = useRef<number>();
   const lastValidTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const lastValidCameraPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 30, 80));
+
+  // Function to update positions from API or fallback
+  const updatePositions = async () => {
+    try {
+      const response = await fetch('/api/astronomy/positions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch positions');
+      }
+      const apiPositions = await response.json();
+      setPlanetPositions(apiPositions);
+      setUsingApiPositions(true);
+      console.log('Updated positions from API');
+    } catch (error) {
+      console.warn('Failed to get positions from API, using fallback positions:', error);
+      setPlanetPositions(generateFallbackPositions());
+      setUsingApiPositions(false);
+    }
+  };
 
   useEffect(() => {
     console.log('Initializing with fallback positions');
     setPlanetPositions(generateFallbackPositions());
     setIsLoading(false);
     onLoaded();
-  }, [onLoaded]);
 
-  useEffect(() => {
+    // Start position updates
     (async () => {
       try {
-        console.log('Checking API availability in background...');
-        const ok = await checkApiAvailability();
-        console.log('API available:', ok);
-        if (ok) {
-          console.log('Fetching planet positions from API...');
-          const apiPositions = await getBodyPositions();
-          setPlanetPositions(apiPositions);
-          updateIntervalRef.current = window.setInterval(async () => {
-            const newPositions = await getBodyPositions();
-            setPlanetPositions(newPositions);
-          }, 2 * 60 * 60 * 1000);
-        }
+        console.log('Starting position updates');
+        await updatePositions();
+        // Update positions every 30 minutes
+        updateIntervalRef.current = window.setInterval(updatePositions, 30 * 60 * 1000);
       } catch (error) {
-        console.error('Error with API:', error);
+        console.error('Error starting position updates:', error);
+        setUsingApiPositions(false);
       }
     })();
-    return () => clearInterval(updateIntervalRef.current);
-  }, []);
+
+    return () => {
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+      }
+    };
+  }, [onLoaded]);
 
   useFrame((_, delta) => {
     if (!isLoading && !selectedBody) {
       Object.values(planetPositions).forEach((pos) => {
         if (pos.distance && pos.distance > 0) {
-          const speed = 0.05 / pos.distance;
-          const x = pos.x * Math.cos(speed * delta) - pos.z * Math.sin(speed * delta);
-          const z = pos.z * Math.cos(speed * delta) + pos.x * Math.sin(speed * delta);
-          pos.x = x;
-          pos.z = z;
+          // Only update positions if we're using fallback positions
+          if (!usingApiPositions) {
+            const speed = 0.05 / pos.distance;
+            const x = pos.x * Math.cos(speed * delta) - pos.z * Math.sin(speed * delta);
+            const z = pos.z * Math.cos(speed * delta) + pos.x * Math.sin(speed * delta);
+            pos.x = x;
+            pos.z = z;
+          }
         }
       });
     }

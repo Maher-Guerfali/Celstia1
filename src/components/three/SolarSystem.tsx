@@ -8,7 +8,6 @@ import OrbitPath from './OrbitPath';
 import Stars from './Stars';
 import { celestialBodies } from '../../data/celestialBodies';
 import { useStore } from '../../store';
-import { PlanetaryPositions, generateFallbackPositions, BodyPosition } from '../../../pages/api/astronomy';
 
 interface SolarSystemProps {
   onLoaded: () => void;
@@ -19,125 +18,56 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const { camera } = useThree();
   const { selectedBody, setSelectedBody } = useStore();
-  const [planetPositions, setPlanetPositions] = useState<PlanetaryPositions>({});
+  const [planetPositions, setPlanetPositions] = useState<{ [key: string]: { x: number; y: number; z: number; distance: number } }>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [usingApiPositions, setUsingApiPositions] = useState(false);
-  const updateIntervalRef = useRef<number>();
-  const lastValidTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
-  const lastValidCameraPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 30, 80));
 
-  // Function to update positions from API or fallback
-  const updatePositions = async () => {
-    try {
-      const response = await fetch('/api/astronomy/positions');
-      if (!response.ok) {
-        throw new Error('Failed to fetch positions');
+  // Function to calculate planet positions based on time
+  const calculatePlanetPositions = () => {
+    const now = new Date();
+    const baseTime = new Date('2000-01-01T00:00:00Z').getTime();
+    const elapsedTime = (now.getTime() - baseTime) / (1000 * 60 * 60 * 24); // Days since 2000
+
+    const positions: { [key: string]: { x: number; y: number; z: number; distance: number } } = {};
+
+    celestialBodies.forEach((body) => {
+      if (body.id === 'sun') {
+        positions[body.id] = { x: 0, y: 0, z: 0, distance: 0 };
+        return;
       }
-      const apiPositions = await response.json();
-      
-      // Log the positions for debugging
-      console.log('Raw planet positions:', apiPositions);
-      
-      // Scale down the positions to make them visible in the canvas
-      const scaledPositions: PlanetaryPositions = {};
-      Object.entries(apiPositions).forEach(([id, pos]) => {
-        const typedPos = pos as BodyPosition;
-        // Convert AU to scene units (1 AU = 100 scene units)
-        const scaleFactor = 100;
-        scaledPositions[id] = {
-          ...typedPos,
-          x: typedPos.x * scaleFactor,
-          y: typedPos.y * scaleFactor,
-          z: typedPos.z * scaleFactor,
-          distance: typedPos.distance * scaleFactor
-        };
-      });
-      
-      setPlanetPositions(scaledPositions);
-      setUsingApiPositions(true);
-      console.log('Scaled planet positions:', scaledPositions);
-    } catch (error) {
-      console.warn('Failed to get positions from API, using fallback positions:', error);
-      const fallbackPositions = generateFallbackPositions();
-      // Scale down fallback positions as well
-      const scaledFallback: PlanetaryPositions = {};
-      Object.entries(fallbackPositions).forEach(([id, pos]) => {
-        const typedPos = pos as BodyPosition;
-        const scaleFactor = 100;
-        scaledFallback[id] = {
-          ...typedPos,
-          x: typedPos.x * scaleFactor,
-          y: typedPos.y * scaleFactor,
-          z: typedPos.z * scaleFactor,
-          distance: typedPos.distance * scaleFactor
-        };
-      });
-      setPlanetPositions(scaledFallback);
-      setUsingApiPositions(false);
-    }
+
+      // Calculate angle based on orbital period
+      //const period = body.orbitPeriod || 365; // Default to Earth's period if not specified
+      const angle = (2 * Math.PI * elapsedTime) / 1;
+
+      // Calculate position
+      const x = Math.cos(angle) * body.orbitRadius;
+      const z = Math.sin(angle) * body.orbitRadius;
+      const y = Math.sin(body.inclination || 0) * body.orbitRadius;
+
+      positions[body.id] = {
+        x,
+        y,
+        z,
+        distance: body.orbitRadius
+      };
+    });
+
+    return positions;
   };
 
   useEffect(() => {
-    console.log('Initializing with fallback positions');
-    const initialPositions = generateFallbackPositions();
-    // Scale down initial positions
-    const scaledInitial: PlanetaryPositions = {};
-    Object.entries(initialPositions).forEach(([id, pos]) => {
-      const typedPos = pos as BodyPosition;
-      const scaleFactor = 100;
-      scaledInitial[id] = {
-        ...typedPos,
-        x: typedPos.x * scaleFactor,
-        y: typedPos.y * scaleFactor,
-        z: typedPos.z * scaleFactor,
-        distance: typedPos.distance * scaleFactor
-      };
-    });
-    setPlanetPositions(scaledInitial);
+    console.log('Initializing planet positions');
+    setPlanetPositions(calculatePlanetPositions());
     setIsLoading(false);
     onLoaded();
 
-    // Start position updates
-    (async () => {
-      try {
-        console.log('Starting position updates');
-        await updatePositions();
-        // Update positions every 30 minutes
-        updateIntervalRef.current = window.setInterval(updatePositions, 30 * 60 * 1000);
-      } catch (error) {
-        console.error('Error starting position updates:', error);
-        setUsingApiPositions(false);
-      }
-    })();
+    // Update positions every second
+    const interval = setInterval(() => {
+      setPlanetPositions(calculatePlanetPositions());
+    }, 1000);
 
-    return () => {
-      if (updateIntervalRef.current) {
-        clearInterval(updateIntervalRef.current);
-      }
-    };
+    return () => clearInterval(interval);
   }, [onLoaded]);
-
-  // Log planet positions in useFrame for debugging
-  useFrame((_, delta) => {
-    if (!isLoading && !selectedBody) {
-      Object.entries(planetPositions).forEach(([id, pos]) => {
-        if (pos.distance && pos.distance > 0) {
-          // Only update positions if we're using fallback positions
-          if (!usingApiPositions) {
-            const speed = 0.05 / pos.distance;
-            const x = pos.x * Math.cos(speed * delta) - pos.z * Math.sin(speed * delta);
-            const z = pos.z * Math.cos(speed * delta) + pos.x * Math.sin(speed * delta);
-            pos.x = x;
-            pos.z = z;
-          }
-          // Log planet positions every 60 frames (about once per second)
-          if (delta % 60 === 0) {
-            console.log(`Planet ${id} position:`, { x: pos.x, y: pos.y, z: pos.z, distance: pos.distance });
-          }
-        }
-      });
-    }
-  });
 
   useEffect(() => {
     if (!selectedBody) return;
@@ -154,8 +84,6 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         Math.sin(angle) * camDist
       );
       const newCamPos = target.clone().add(camOffset);
-      lastValidTarget.current = target;
-      lastValidCameraPos.current = newCamPos;
       gsap.to(controlsRef.current!.target, {
         x: target.x,
         y: target.y,
@@ -205,7 +133,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
           <group key={body.id}>
             {i > 0 && (
               <OrbitPath
-                radius={pos?.distance || body.orbitRadius * 100}
+                radius={pos?.distance || body.orbitRadius}
                 color={body.id === selectedBody ? '#fff' : '#555'}
                 opacity={body.id === selectedBody ? 0.6 : 0.4}
                 inclination={Math.atan2(pos?.y || 0, Math.hypot(pos?.x || 0, pos?.z || 0))}

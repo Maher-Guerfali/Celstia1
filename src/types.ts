@@ -7,6 +7,7 @@ export interface CelestialBodyData {
   texture?: string;
   orbitRadius: number;
   orbitSpeed: number;
+  
   rotationSpeed: number;
   moons?: MoonData[];
   hasRings?: boolean;

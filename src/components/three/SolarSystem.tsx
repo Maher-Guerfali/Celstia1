@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -26,53 +26,9 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const { selectedBody, setSelectedBody } = useStore();
   const [planetPositions, setPlanetPositions] = useState<PlanetaryPositions>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [apiAvailable, setApiAvailable] = useState(false);
   const updateIntervalRef = useRef<number>();
   const lastValidTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const lastValidCameraPos = useRef<THREE.Vector3>(new THREE.Vector3(0, 30, 80));
-
-  const getFallbackPositions = useCallback((): PlanetaryPositions => {
-    const fallback: PlanetaryPositions = {};
-    celestialBodies.forEach((body) => {
-      const angle = Math.random() * Math.PI * 2;
-      const x = Math.cos(angle) * body.orbitRadius;
-      const z = Math.sin(angle) * body.orbitRadius;
-      const y = Math.sin(body.inclination || 0) * body.orbitRadius;
-      fallback[body.id] = {
-        x,
-        y,
-        z,
-        distance: body.orbitRadius,
-        datetime: new Date().toISOString(),
-      };
-    });
-    return fallback;
-  }, []);
-
-  const updatePlanetPositions = useCallback(async () => {
-    if (!apiAvailable) {
-      setPlanetPositions(getFallbackPositions());
-      return;
-    }
-    try {
-      const apiData = await getBodyPositions();
-      const merged = { ...getFallbackPositions(), ...apiData };
-      Object.entries(merged).forEach(([id, pos]) => {
-        if (id !== 'sun') {
-          const body = celestialBodies.find((b) => b.id === id);
-          if (body) {
-            const factor = body.orbitRadius / (pos.distance || 1);
-            merged[id].x *= factor;
-            merged[id].y *= factor;
-            merged[id].z *= factor;
-          }
-        }
-      });
-      setPlanetPositions(merged);
-    } catch {
-      setPlanetPositions(getFallbackPositions());
-    }
-  }, [apiAvailable, getFallbackPositions]);
 
   useEffect(() => {
     console.log('Initializing with fallback positions');
@@ -87,7 +43,6 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         console.log('Checking API availability in background...');
         const ok = await checkApiAvailability();
         console.log('API available:', ok);
-        setApiAvailable(ok);
         if (ok) {
           console.log('Fetching planet positions from API...');
           const apiPositions = await getBodyPositions();
@@ -99,7 +54,6 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         }
       } catch (error) {
         console.error('Error with API:', error);
-        setApiAvailable(false);
       }
     })();
     return () => clearInterval(updateIntervalRef.current);

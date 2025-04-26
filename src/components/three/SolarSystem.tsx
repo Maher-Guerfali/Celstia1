@@ -20,6 +20,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const { selectedBody, setSelectedBody } = useStore();
   const [planetPositions, setPlanetPositions] = useState<{ [key: string]: { x: number; y: number; z: number; distance: number } }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isZooming, setIsZooming] = useState(false);
 
   // Function to calculate planet positions based on time
   const calculatePlanetPositions = () => {
@@ -27,6 +28,9 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     const baseTime = new Date('2000-01-01T00:00:00Z').getTime();
     const elapsedTime = (now.getTime() - baseTime) / (1000 * 60 * 60 * 24); // Days since 2000
 
+    // Use current hour to add variation to the view based on time of day
+    const hourFactor = (now.getHours() % 12) / 12; // 0-1 based on hour (resets at noon/midnight)
+    
     const positions: { [key: string]: { x: number; y: number; z: number; distance: number } } = {};
 
     celestialBodies.forEach((body) => {
@@ -35,25 +39,149 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         return;
       }
 
-      // Calculate angle based on orbital period
-      //const period = body.orbitPeriod || 365; // Default to Earth's period if not specified
-      const angle = (2 * Math.PI * elapsedTime) / 1;
-
-      // Calculate position
-      const x = Math.cos(angle) * body.orbitRadius;
-      const z = Math.sin(angle) * body.orbitRadius;
-      const y = Math.sin(body.inclination || 0) * body.orbitRadius;
+      // Calculate angle based on orbital period and current time
+      const orbitPeriod = getOrbitPeriod(body.id);
+      const angle = (2 * Math.PI * elapsedTime / orbitPeriod) + (hourFactor * Math.PI / 6);
+      
+      // Calculate eccentricity for more realistic orbits
+      const eccentricity = getEccentricity(body.id);
+      
+      // Calculate position with slight inclination and eccentricity
+      const distance = body.orbitRadius * (1 - eccentricity * Math.cos(angle));
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      
+      // Add inclination to the orbit
+      const inclination = getInclination(body.id);
+      const y = Math.sin(angle) * distance * Math.sin(inclination);
 
       positions[body.id] = {
         x,
         y,
         z,
-        distance: body.orbitRadius
+        distance
       };
     });
 
     return positions;
   };
+
+  // Helper function to get orbital period in Earth days
+  const getOrbitPeriod = (bodyId: string): number => {
+    const periods: { [key: string]: number } = {
+      mercury: 88,    // 88 Earth days
+      venus: 225,     // 225 Earth days
+      earth: 365.25,  // 365.25 Earth days (1 year)
+      mars: 687,      // 687 Earth days
+      jupiter: 4333,  // 11.86 Earth years
+      saturn: 10759,  // 29.46 Earth years
+      uranus: 30687,  // 84.01 Earth years
+      neptune: 60190, // 164.8 Earth years
+      pluto: 90560,   // 248 Earth years
+      black_hole: 500000 // Fictional value
+    };
+    
+    return periods[bodyId] || 365.25; // Default to Earth's period if not found
+  };
+
+  // Helper function to get orbital eccentricity
+  const getEccentricity = (bodyId: string): number => {
+    const eccentricities: { [key: string]: number } = {
+      mercury: 0.205,
+      venus: 0.007,
+      earth: 0.017,
+      mars: 0.094,
+      jupiter: 0.049,
+      saturn: 0.057,
+      uranus: 0.046,
+      neptune: 0.010,
+      pluto: 0.248,
+      black_hole: 0.7 // Fictional value
+    };
+    
+    return eccentricities[bodyId] || 0.01; // Default to low eccentricity if not found
+  };
+
+  // Helper function to get orbital inclination in radians
+  const getInclination = (bodyId: string): number => {
+    const inclinations: { [key: string]: number } = {
+      mercury: 7.0 * Math.PI / 180,
+      venus: 3.4 * Math.PI / 180,
+      earth: 0.0 * Math.PI / 180,
+      mars: 1.9 * Math.PI / 180,
+      jupiter: 1.3 * Math.PI / 180,
+      saturn: 2.5 * Math.PI / 180,
+      uranus: 0.8 * Math.PI / 180,
+      neptune: 1.8 * Math.PI / 180,
+      pluto: 17.2 * Math.PI / 180,
+      black_hole: 45 * Math.PI / 180 // Fictional value
+    };
+    
+    return inclinations[bodyId] || 0; // Default to no inclination if not found
+  };
+
+  // Function to zoom to a planet
+  const zoomToPlanet = (bodyId: string) => {
+    const body = celestialBodies.find((b) => b.id === bodyId);
+    const pos = planetPositions[bodyId];
+    
+    if (!body || !pos) return;
+    
+    setIsZooming(true);
+    
+    // Disable controls during zoom
+    if (controlsRef.current) {
+      controlsRef.current.enabled = false;
+    }
+    
+    const target = new THREE.Vector3(pos.x, pos.y, pos.z);
+    
+    // Calculate appropriate camera distance based on planet size
+    const distanceFactor = body.id === 'sun' ? 5 : body.radius < 1 ? 10 : 3;
+    const zoomDistance = body.radius * distanceFactor + 5;
+    
+    // Create a slightly offset viewing angle for more dynamic zoom
+    const randomAngle = Math.random() * Math.PI * 2;
+    const randomHeight = (Math.random() * 0.4) + 0.2; // Between 0.2 and 0.6
+    
+    const camOffset = new THREE.Vector3(
+      Math.cos(randomAngle) * zoomDistance,
+      zoomDistance * randomHeight, // Slightly above the planet
+      Math.sin(randomAngle) * zoomDistance
+    );
+    
+    const newCamPos = target.clone().add(camOffset);
+    
+    // Animate camera position and target
+    gsap.to(camera.position, {
+      x: newCamPos.x,
+      y: newCamPos.y,
+      z: newCamPos.z,
+      duration: 2.5,
+      ease: "power2.inOut",
+      onComplete: () => {
+        // Re-enable controls after zoom completes
+        if (controlsRef.current) {
+          controlsRef.current.enabled = true;
+        }
+        setIsZooming(false);
+      }
+    });
+    
+    gsap.to(controlsRef.current!.target, {
+      x: target.x,
+      y: target.y,
+      z: target.z,
+      duration: 2.2,
+      ease: "power2.inOut"
+    });
+  };
+  
+  // Handle planet selection
+  useEffect(() => {
+    if (!selectedBody) return;
+    zoomToPlanet(selectedBody);
+  }, [selectedBody]);
 
   useEffect(() => {
     console.log('Initializing planet positions');
@@ -61,45 +189,20 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     setIsLoading(false);
     onLoaded();
 
-    // Update positions every second
+    // Update positions more frequently (every 100ms) for smoother animation
     const interval = setInterval(() => {
       setPlanetPositions(calculatePlanetPositions());
-    }, 1000);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [onLoaded]);
 
-  useEffect(() => {
-    if (!selectedBody) return;
-    const body = celestialBodies.find((b) => b.id === selectedBody);
-    const pos = planetPositions[selectedBody];
-    if (body && pos) {
-      const target = new THREE.Vector3(pos.x, pos.y, pos.z);
-      const distFactor = body.id === 'sun' ? 5 : 3;
-      const camDist = body.radius * distFactor + 5;
-      const angle = Math.random() * Math.PI * 2;
-      const camOffset = new THREE.Vector3(
-        Math.cos(angle) * camDist,
-        camDist * 0.3,
-        Math.sin(angle) * camDist
-      );
-      const newCamPos = target.clone().add(camOffset);
-      gsap.to(controlsRef.current!.target, {
-        x: target.x,
-        y: target.y,
-        z: target.z,
-        duration: 2,
-        ease: 'power2.inOut',
-      });
-      gsap.to(camera.position, {
-        x: newCamPos.x,
-        y: newCamPos.y,
-        z: newCamPos.z,
-        duration: 2,
-        ease: 'power2.inOut',
-      });
+  // Allow manual camera control if not zooming
+  useFrame(() => {
+    if (isZooming && controlsRef.current) {
+      controlsRef.current.update();
     }
-  }, [selectedBody, planetPositions, camera.position]);
+  });
 
   if (isLoading) return <primitive object={new THREE.Object3D()} />;
 
@@ -118,7 +221,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         dampingFactor={0.05}
         rotateSpeed={0.5}
         zoomSpeed={0.5}
-        minDistance={50}
+        minDistance={5} // Reduced to allow closer zoom
         maxDistance={1000}
         target={[0, 0, 0]}
       />
@@ -136,13 +239,16 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
                 radius={pos?.distance || body.orbitRadius}
                 color={body.id === selectedBody ? '#fff' : '#555'}
                 opacity={body.id === selectedBody ? 0.6 : 0.4}
-                inclination={Math.atan2(pos?.y || 0, Math.hypot(pos?.x || 0, pos?.z || 0))}
+                inclination={getInclination(body.id)}
+                eccentricity={getEccentricity(body.id)}
               />
             )}
             <CelestialBody
               data={body}
               position={worldPos}
+              usingRealTime={true}
               onClick={() => setSelectedBody(body.id)}
+              isHighlighted={body.id === selectedBody}
             />
           </group>
         );

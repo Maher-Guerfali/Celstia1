@@ -12,7 +12,7 @@ import {
   getBodyPositions, 
   checkApiAvailability, 
   PlanetaryPositions 
-} from '../../services/astronomyApi';
+} from '../../../pages/api/astronomy';
 
 interface SolarSystemProps {
   onLoaded: () => void;

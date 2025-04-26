@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -23,7 +23,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
   const [isZooming, setIsZooming] = useState(false);
 
   // Function to calculate planet positions based on time
-  const calculatePlanetPositions = () => {
+  const calculatePlanetPositions = useCallback(() => {
     const now = new Date();
     const baseTime = new Date('2000-01-01T00:00:00Z').getTime();
     const elapsedTime = (now.getTime() - baseTime) / (1000 * 60 * 60 * 24); // Days since 2000
@@ -64,7 +64,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     });
 
     return positions;
-  };
+  }, []);
 
   // Helper function to get orbital period in Earth days
   const getOrbitPeriod = (bodyId: string): number => {
@@ -120,8 +120,8 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     return inclinations[bodyId] || 0; // Default to no inclination if not found
   };
 
-  // Function to zoom to a planet
-  const zoomToPlanet = (bodyId: string) => {
+  // Function to zoom to a planet - wrapped in useCallback to avoid dependency issues
+  const zoomToPlanet = useCallback((bodyId: string) => {
     const body = celestialBodies.find((b) => b.id === bodyId);
     const pos = planetPositions[bodyId];
     
@@ -168,20 +168,22 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
       }
     });
     
-    gsap.to(controlsRef.current!.target, {
-      x: target.x,
-      y: target.y,
-      z: target.z,
-      duration: 2.2,
-      ease: "power2.inOut"
-    });
-  };
+    if (controlsRef.current) {
+      gsap.to(controlsRef.current.target, {
+        x: target.x,
+        y: target.y,
+        z: target.z,
+        duration: 2.2,
+        ease: "power2.inOut"
+      });
+    }
+  }, [camera, planetPositions]);
   
   // Handle planet selection
   useEffect(() => {
     if (!selectedBody) return;
     zoomToPlanet(selectedBody);
-  }, [selectedBody]);
+  }, [selectedBody, zoomToPlanet]);
 
   useEffect(() => {
     console.log('Initializing planet positions');
@@ -195,7 +197,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [onLoaded]);
+  }, [onLoaded, calculatePlanetPositions]);
 
   // Allow manual camera control if not zooming
   useFrame(() => {

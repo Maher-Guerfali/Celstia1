@@ -20,7 +20,6 @@ interface CelestialBodyProps {
 const Moon = ({ moon, parentPosition }: { moon: MoonType; parentPosition: [number, number, number] }) => {
   // Always call useTexture to satisfy Rules of Hooks
   const moonTexture = useTexture(moon.texture || '');
-  const moonRef = useRef<THREE.Group>(null);
   const moonMeshRef = useRef<THREE.Mesh>(null);
   const [moonHovered, setMoonHovered] = useState(false);
   const setSelectedBody = useStore(state => state.setSelectedBody);
@@ -33,7 +32,10 @@ const Moon = ({ moon, parentPosition }: { moon: MoonType; parentPosition: [numbe
     setAngle(prevAngle => prevAngle + delta * moon.orbitSpeed);
     
     if (moonMeshRef.current) {
+      // Update rotation
       moonMeshRef.current.rotation.y += delta * moon.rotationSpeed;
+      
+      // Update scale on hover using GSAP correctly
       const scale = moonHovered ? 1.1 : 1;
       gsap.to(moonMeshRef.current.scale, { x: scale, y: scale, z: scale, duration: 0.3 });
     }
@@ -95,8 +97,16 @@ const CelestialBody = ({
   // Handle highlighting effect
   useEffect(() => {
     if (highlightRef.current) {
-      gsap.to(highlightRef.current, {
-        scale: isHighlighted ? 1.2 : 0,
+      gsap.to(highlightRef.current.scale, {
+        x: isHighlighted ? 1.2 : 0,
+        y: isHighlighted ? 1.2 : 0,
+        z: isHighlighted ? 1.2 : 0,
+        duration: 0.5,
+        ease: 'power2.inOut'
+      });
+      
+      // Adjust opacity separately
+      gsap.to(highlightRef.current.material, {
         opacity: isHighlighted ? 0.5 : 0,
         duration: 0.5,
         ease: 'power2.inOut'
@@ -118,8 +128,8 @@ const CelestialBody = ({
   useFrame((_, delta) => {
     if (meshRef.current) {
       // Use the real-time position from parent component if available
-      if (position && usingRealTime) {
-        groupRef.current?.position.set(...position);
+      if (position && usingRealTime && groupRef.current) {
+        groupRef.current.position.set(...position);
       }
       
       // Apply rotation to the planet itself
@@ -137,9 +147,8 @@ const CelestialBody = ({
       
       // Animate highlight pulse when selected
       if (highlightRef.current && isHighlighted) {
-        highlightRef.current.scale.x = 1.2 + Math.sin(Date.now() * 0.002) * 0.05;
-        highlightRef.current.scale.y = 1.2 + Math.sin(Date.now() * 0.002) * 0.05;
-        highlightRef.current.scale.z = 1.2 + Math.sin(Date.now() * 0.002) * 0.05;
+        const pulseScale = 1.2 + Math.sin(Date.now() * 0.002) * 0.05;
+        highlightRef.current.scale.set(pulseScale, pulseScale, pulseScale);
       }
     }
   });

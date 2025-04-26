@@ -36,36 +36,40 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
       const apiPositions = await response.json();
       
       // Log the positions for debugging
-      console.log('Planet positions:', apiPositions);
+      console.log('Raw planet positions:', apiPositions);
       
       // Scale down the positions to make them visible in the canvas
       const scaledPositions: PlanetaryPositions = {};
       Object.entries(apiPositions).forEach(([id, pos]) => {
         const typedPos = pos as BodyPosition;
+        // Convert AU to scene units (1 AU = 100 scene units)
+        const scaleFactor = 100;
         scaledPositions[id] = {
           ...typedPos,
-          x: typedPos.x * 0.1,
-          y: typedPos.y * 0.1,
-          z: typedPos.z * 0.1,
-          distance: typedPos.distance * 0.1
+          x: typedPos.x * scaleFactor,
+          y: typedPos.y * scaleFactor,
+          z: typedPos.z * scaleFactor,
+          distance: typedPos.distance * scaleFactor
         };
       });
       
       setPlanetPositions(scaledPositions);
       setUsingApiPositions(true);
-      console.log('Updated positions from API (scaled):', scaledPositions);
+      console.log('Scaled planet positions:', scaledPositions);
     } catch (error) {
       console.warn('Failed to get positions from API, using fallback positions:', error);
       const fallbackPositions = generateFallbackPositions();
       // Scale down fallback positions as well
       const scaledFallback: PlanetaryPositions = {};
       Object.entries(fallbackPositions).forEach(([id, pos]) => {
+        const typedPos = pos as BodyPosition;
+        const scaleFactor = 100;
         scaledFallback[id] = {
-          ...pos,
-          x: pos.x * 0.1,
-          y: pos.y * 0.1,
-          z: pos.z * 0.1,
-          distance: pos.distance * 0.1
+          ...typedPos,
+          x: typedPos.x * scaleFactor,
+          y: typedPos.y * scaleFactor,
+          z: typedPos.z * scaleFactor,
+          distance: typedPos.distance * scaleFactor
         };
       });
       setPlanetPositions(scaledFallback);
@@ -79,12 +83,14 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     // Scale down initial positions
     const scaledInitial: PlanetaryPositions = {};
     Object.entries(initialPositions).forEach(([id, pos]) => {
+      const typedPos = pos as BodyPosition;
+      const scaleFactor = 100;
       scaledInitial[id] = {
-        ...pos,
-        x: pos.x * 0.1,
-        y: pos.y * 0.1,
-        z: pos.z * 0.1,
-        distance: pos.distance * 0.1
+        ...typedPos,
+        x: typedPos.x * scaleFactor,
+        y: typedPos.y * scaleFactor,
+        z: typedPos.z * scaleFactor,
+        distance: typedPos.distance * scaleFactor
       };
     });
     setPlanetPositions(scaledInitial);
@@ -175,7 +181,7 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
       <PerspectiveCamera
         ref={cameraRef}
         makeDefault
-        position={lastValidCameraPos.current.toArray()}
+        position={[0, 200, 500]}
         fov={45}
       />
       <OrbitControls
@@ -184,12 +190,12 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         dampingFactor={0.05}
         rotateSpeed={0.5}
         zoomSpeed={0.5}
-        minDistance={10}
-        maxDistance={200}
-        target={lastValidTarget.current.toArray()}
+        minDistance={50}
+        maxDistance={1000}
+        target={[0, 0, 0]}
       />
       <ambientLight intensity={0.5} />
-      <pointLight position={[0, 0, 0]} intensity={1.5} distance={600} decay={2} castShadow />
+      <pointLight position={[0, 0, 0]} intensity={1.5} distance={1000} decay={2} castShadow />
       {celestialBodies.map((body, i) => {
         const pos = planetPositions[body.id];
         const worldPos: [number, number, number] = pos
@@ -199,14 +205,10 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
           <group key={body.id}>
             {i > 0 && (
               <OrbitPath
-                radius={
-                  Math.sqrt((pos?.x || 0) ** 2 + (pos?.z || 0) ** 2) || body.orbitRadius
-                }
+                radius={pos?.distance || body.orbitRadius * 100}
                 color={body.id === selectedBody ? '#fff' : '#555'}
                 opacity={body.id === selectedBody ? 0.6 : 0.4}
-                inclination={
-                  Math.atan2(pos?.y || 0, Math.hypot(pos?.x || 0, pos?.z || 0))
-                }
+                inclination={Math.atan2(pos?.y || 0, Math.hypot(pos?.x || 0, pos?.z || 0))}
               />
             )}
             <CelestialBody

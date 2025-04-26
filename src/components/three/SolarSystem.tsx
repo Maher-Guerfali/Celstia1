@@ -8,7 +8,7 @@ import OrbitPath from './OrbitPath';
 import Stars from './Stars';
 import { celestialBodies } from '../../data/celestialBodies';
 import { useStore } from '../../store';
-import { PlanetaryPositions, generateFallbackPositions } from '../../../pages/api/astronomy';
+import { PlanetaryPositions, generateFallbackPositions, BodyPosition } from '../../../pages/api/astronomy';
 
 interface SolarSystemProps {
   onLoaded: () => void;
@@ -34,19 +34,60 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
         throw new Error('Failed to fetch positions');
       }
       const apiPositions = await response.json();
-      setPlanetPositions(apiPositions);
+      
+      // Log the positions for debugging
+      console.log('Planet positions:', apiPositions);
+      
+      // Scale down the positions to make them visible in the canvas
+      const scaledPositions: PlanetaryPositions = {};
+      Object.entries(apiPositions).forEach(([id, pos]) => {
+        const typedPos = pos as BodyPosition;
+        scaledPositions[id] = {
+          ...typedPos,
+          x: typedPos.x * 0.1,
+          y: typedPos.y * 0.1,
+          z: typedPos.z * 0.1,
+          distance: typedPos.distance * 0.1
+        };
+      });
+      
+      setPlanetPositions(scaledPositions);
       setUsingApiPositions(true);
-      console.log('Updated positions from API');
+      console.log('Updated positions from API (scaled):', scaledPositions);
     } catch (error) {
       console.warn('Failed to get positions from API, using fallback positions:', error);
-      setPlanetPositions(generateFallbackPositions());
+      const fallbackPositions = generateFallbackPositions();
+      // Scale down fallback positions as well
+      const scaledFallback: PlanetaryPositions = {};
+      Object.entries(fallbackPositions).forEach(([id, pos]) => {
+        scaledFallback[id] = {
+          ...pos,
+          x: pos.x * 0.1,
+          y: pos.y * 0.1,
+          z: pos.z * 0.1,
+          distance: pos.distance * 0.1
+        };
+      });
+      setPlanetPositions(scaledFallback);
       setUsingApiPositions(false);
     }
   };
 
   useEffect(() => {
     console.log('Initializing with fallback positions');
-    setPlanetPositions(generateFallbackPositions());
+    const initialPositions = generateFallbackPositions();
+    // Scale down initial positions
+    const scaledInitial: PlanetaryPositions = {};
+    Object.entries(initialPositions).forEach(([id, pos]) => {
+      scaledInitial[id] = {
+        ...pos,
+        x: pos.x * 0.1,
+        y: pos.y * 0.1,
+        z: pos.z * 0.1,
+        distance: pos.distance * 0.1
+      };
+    });
+    setPlanetPositions(scaledInitial);
     setIsLoading(false);
     onLoaded();
 
@@ -70,9 +111,10 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
     };
   }, [onLoaded]);
 
+  // Log planet positions in useFrame for debugging
   useFrame((_, delta) => {
     if (!isLoading && !selectedBody) {
-      Object.values(planetPositions).forEach((pos) => {
+      Object.entries(planetPositions).forEach(([id, pos]) => {
         if (pos.distance && pos.distance > 0) {
           // Only update positions if we're using fallback positions
           if (!usingApiPositions) {
@@ -81,6 +123,10 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
             const z = pos.z * Math.cos(speed * delta) + pos.x * Math.sin(speed * delta);
             pos.x = x;
             pos.z = z;
+          }
+          // Log planet positions every 60 frames (about once per second)
+          if (delta % 60 === 0) {
+            console.log(`Planet ${id} position:`, { x: pos.x, y: pos.y, z: pos.z, distance: pos.distance });
           }
         }
       });

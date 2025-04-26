@@ -269,8 +269,8 @@ const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
       enableDamping={true}
       dampingFactor={0.05}
       rotateSpeed={0.5}
-      panSpeed={0.8}
-      zoomSpeed={1.2}
+      panSpeed={0.6}
+      zoomSpeed={0.5}
       enableZoom={true}
       enablePan={true}
       minDistance={maxOrbitRadius * 0.05}  // Allow closer zoom

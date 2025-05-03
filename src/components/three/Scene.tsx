@@ -1,15 +1,26 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { XR, createXRStore } from '@react-three/xr';
 import SolarSystem from './SolarSystem';
 import { useStore } from '../../store';
 import LoadingScreen from '../LoadingScreen';
-import ARView from './ARView';
 import Controls from '../Controls';
+import ARView from './ARView';
+
+// Create XR store
+const xrStore = createXRStore();
 
 const Scene = () => {
   const [started, setStarted] = useState(false);
   const initializeAudio = useStore(state => state.initializeAudio);
   const isARMode = useStore(state => state.isARMode);
+  
+  // Enter AR mode when isARMode changes to true
+  useEffect(() => {
+    if (isARMode) {
+      xrStore.enterAR();
+    }
+  }, [isARMode]);
   
   const handleSceneLoaded = () => {
     setStarted(true);
@@ -29,11 +40,20 @@ const Scene = () => {
         }}
       >
         <Suspense fallback={null}>
-          {isARMode && <ARView />}
-          <SolarSystem 
-            onLoaded={handleSceneLoaded} 
-            isARMode={isARMode} 
-          />
+          {isARMode ? (
+            <XR store={xrStore}>
+              <ARView />
+              <SolarSystem 
+                onLoaded={handleSceneLoaded} 
+                isARMode={isARMode} 
+              />
+            </XR>
+          ) : (
+            <SolarSystem 
+              onLoaded={handleSceneLoaded} 
+              isARMode={isARMode} 
+            />
+          )}
         </Suspense>
       </Canvas>
     </div>

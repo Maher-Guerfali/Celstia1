@@ -1,6 +1,5 @@
-// SolarSystem.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// SolarSystem.tsx
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';

@@ -10,6 +10,7 @@ interface StoreState {
   audioLoaded: boolean;
   autoTourActive: boolean;
   showOrbitPaths: boolean;
+  isARMode: boolean;
   ambientSound: Howl | null;
   currentPlanetPositions: { [key: string]: Vector3 };
   setSelectedBody: (id: string | null) => void;
@@ -18,6 +19,7 @@ interface StoreState {
   toggleAudio: () => void;
   toggleAutoTour: () => void;
   toggleOrbitPaths: () => void;
+  toggleARMode: () => void;
   initializeAudio: () => void;
   updatePlanetPosition: (id: string, position: Vector3) => void;
 }
@@ -30,6 +32,7 @@ export const useStore = create<StoreState>((set, get) => ({
   audioLoaded: false,
   autoTourActive: false,
   showOrbitPaths: true,
+  isARMode: false,
   ambientSound: null,
   currentPlanetPositions: {},
   
@@ -130,5 +133,9 @@ export const useStore = create<StoreState>((set, get) => ({
       ...state.currentPlanetPositions,
       [id]: position
     }
+  })),
+
+  toggleARMode: () => set((state) => ({
+    isARMode: !state.isARMode
   }))
 }));

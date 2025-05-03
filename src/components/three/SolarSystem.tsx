@@ -15,9 +15,10 @@ import { useStore } from '../../store';
 
 interface SolarSystemProps {
   onLoaded: () => void;
+  isARMode?: boolean;
 }
 
-const SolarSystem = ({ onLoaded }: SolarSystemProps) => {
+const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
   const controlsRef = useRef<any>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const { camera, gl } = useThree();

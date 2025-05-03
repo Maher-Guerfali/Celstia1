@@ -1,10 +1,11 @@
+
 import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { XR, ARButton, createXRStore } from '@react-three/xr';
 import SolarSystem from './SolarSystem';
 import { useStore } from '../../store';
 import LoadingScreen from '../LoadingScreen';
-import Controls from '../Controls';
+
 import ARView from './ARView';
 
 // Create XR store for AR session management

@@ -1,12 +1,13 @@
 
+
 import { FC, useEffect } from 'react';
-import { useThree, useFrame } from '@react-three/fiber';
+import {  useFrame } from '@react-three/fiber';
 import { useXR } from '@react-three/xr';
-import { Vector3, Matrix4 } from 'three';
+
 
 const ARView: FC<{children?: React.ReactNode}> = ({ children }) => {
-  const { isPresenting, session } = useXR();
-  const { camera } = useThree();
+  const { isPresenting } = useXR();
+
   
   // Report AR status for debugging
   useEffect(() => {

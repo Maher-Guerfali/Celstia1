@@ -3,7 +3,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls, Text, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import CelestialBody from './CelestialBody';
@@ -11,6 +11,17 @@ import OrbitPath from './OrbitPath';
 import Stars from './Stars';
 import { celestialBodies } from '../../data/celestialBodies';
 import { useStore } from '../../store';
+
+// Texture prefetcher to load textures in the background
+const TEXTURE_URLS = celestialBodies.reduce((acc: string[], body) => {
+  if (body.texture) acc.push(body.texture);
+  if (body.moons) {
+    body.moons.forEach(moon => {
+      if (moon.texture) acc.push(moon.texture);
+    });
+  }
+  return acc;
+}, []);
 
 interface SolarSystemProps {
   onLoaded: () => void;
@@ -31,6 +42,12 @@ const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
   >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [loadedBodies, setLoadedBodies] = useState<Set<string>>(new Set());
+  const [bodySpawned, setBodySpawned] = useState<Set<string>>(new Set());
+  
+  // Track overall texture loading progress
+  const { active, progress, loaded, total } = useProgress();
+  const progressRef = useRef(0);
   
   // Use useMemo for constants that don't change
   const { periods, eccentricities, inclinations } = useMemo(() => ({
@@ -179,15 +196,12 @@ const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
 
   // Initialize and set up position calculation interval
   useEffect(() => {
-    // Initial calculation
+    // Calculate initial positions
     setPlanetPositions(calculatePlanetPositions());
-    setIsLoading(false);
-    onLoaded();
     
-    // Create a throttled interval for position updates
-    // Update every 500ms instead of 100ms for better performance
+    // Update positions periodically
     const iv = setInterval(() => {
-      setPlanetPositions((current) => {
+      setPlanetPositions(current => {
         const updated = calculatePlanetPositions();
         
         // Only update positions if there's a meaningful change
@@ -206,7 +220,16 @@ const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
       });
     }, 500);
     
-    return () => clearInterval(iv);
+    // Reset loading state after a minimum delay to give things time to appear
+    const loadTimer = setTimeout(() => {
+      setIsLoading(false);
+      onLoaded();
+    }, 500); // Short delay to allow immediate display
+    
+    return () => {
+      clearInterval(iv);
+      clearTimeout(loadTimer);
+    };
   }, [calculatePlanetPositions, onLoaded]);
 
   // React to body selection changes
@@ -247,7 +270,8 @@ const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
   //const cameraDistance = maxOrbitRadius * 0.8;
   const cameraNear = 0.1;
   const cameraFar = maxOrbitRadius * 4;
-  if (isLoading) return <primitive object={new THREE.Object3D()} />;
+  // Show a minimal scene while loading, but still allow interaction
+  // We no longer block rendering completely - instead we show placeholder spheres
 
   return (
     <>
@@ -310,12 +334,21 @@ const SolarSystem = ({ onLoaded, isARMode = false }: SolarSystemProps) => {
                   eccentricity={1 - pos.distance / body.orbitRadius}
                 />
               )}
+              {/* Progressive loading of bodies - solar system appears as textures load */}
               <CelestialBody
                 data={body}
                 position={[pos.x, pos.y, pos.z]}
                 usingRealTime
                 isHighlighted={selectedBody === body.id}
                 onClick={() => setSelectedBody(body.id)}
+                onTextureLoaded={() => {
+                  // Mark this celestial body as loaded
+                  setLoadedBodies(prev => {
+                    const updated = new Set(prev);
+                    updated.add(body.id);
+                    return updated;
+                  });
+                }}
               />
             </group>
           );

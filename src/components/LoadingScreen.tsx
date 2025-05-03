@@ -1,10 +1,36 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useProgress } from '@react-three/drei';
+import { useEffect, useState } from 'react';
 
 interface LoadingScreenProps {
   started: boolean;
 }
 
 const LoadingScreen = ({ started }: LoadingScreenProps) => {
+  // Track three.js/drie loading progress
+  const { progress, loaded, total } = useProgress();
+  
+  // Create a smoother progress animation that doesn't jump around
+  const [smoothProgress, setSmoothProgress] = useState(0);
+  
+  // Update smooth progress to catch up with actual progress
+  useEffect(() => {
+    // No need to update if we're already at 100% or if started = true
+    if (smoothProgress >= 100 || started) return;
+    
+    // Create a smoother animation to the target progress
+    const targetProgress = progress;
+    const diff = targetProgress - smoothProgress;
+    
+    // Only update if there's a meaningful difference
+    if (diff > 0.5) {
+      const timer = setTimeout(() => {
+        setSmoothProgress(prev => Math.min(prev + Math.max(diff * 0.1, 0.5), 100));
+      }, 16); // ~60fps
+      
+      return () => clearTimeout(timer);
+    }
+  }, [progress, smoothProgress, started]);
   return (
     <AnimatePresence>
       {!started && (
@@ -22,9 +48,15 @@ const LoadingScreen = ({ started }: LoadingScreenProps) => {
             <motion.div 
               className="h-full bg-blue-500"
               initial={{ width: '0%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+              animate={{ width: `${smoothProgress}%` }}
+              transition={{ duration: 0.3 }}
             />
+          </div>
+          
+          <div className="mt-2 text-sm text-gray-400">
+            {loaded > 0 && (
+              <span>{Math.round(smoothProgress)}% - Loading textures ({loaded}/{total || '?'})</span>
+            )}
           </div>
         </motion.div>
       )}

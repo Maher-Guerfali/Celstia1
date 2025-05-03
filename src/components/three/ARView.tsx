@@ -1,24 +1,29 @@
 
 
-import { FC, useEffect } from 'react';
-import {  useFrame } from '@react-three/fiber';
+import { FC, useEffect, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useXR } from '@react-three/xr';
 
-
 const ARView: FC<{children?: React.ReactNode}> = ({ children }) => {
+  // Always call hooks unconditionally as per React's rules
   const { isPresenting } = useXR();
-
+  const [isBrowser, setIsBrowser] = useState(false);
+  
+  useEffect(() => {
+    setIsBrowser(typeof window !== 'undefined');
+  }, []);
   
   // Report AR status for debugging
   useEffect(() => {
-    if (isPresenting) {
+    // Only run client-side code after component has mounted
+    if (isBrowser && isPresenting) {
       console.log('AR session started successfully');
     }
-  }, [isPresenting]);
+  }, [isPresenting, isBrowser]);
   
   // Set up AR hit testing if needed
   useFrame(() => {
-    if (isPresenting) {
+    if (isBrowser && isPresenting) {
       // Optional: Add custom frame-by-frame AR logic here
       // This could include placement of objects based on hit testing
     }

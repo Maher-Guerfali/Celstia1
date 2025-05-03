@@ -2,26 +2,46 @@ import { useState } from 'react';
 import { Music, Orbit, Info, Glasses } from 'lucide-react';
 import { useStore } from '../store';
 import Tutorial from './Tutorial';
+import { useRouter } from 'next/router';
 
 const Controls = () => {
+  const router = useRouter();
   const [showTutorial, setShowTutorial] = useState(false);
-  const [isARMode, setIsARMode] = useState(false);
   const [isARLoading, setIsARLoading] = useState(false);
+  
+  // Get state from global store
   const audioEnabled = useStore(state => state.audioEnabled);
   const showOrbits = useStore(state => state.showOrbitPaths);
-  const { toggleAudio, toggleOrbitPaths } = useStore();
+  const isARMode = useStore(state => state.isARMode);
+  const { toggleAudio, toggleOrbitPaths, toggleARMode } = useStore();
 
   const handleARToggle = async () => {
     setIsARLoading(true);
     try {
-      if (!isARMode) {
+      // Check if browser supports WebXR
+      if (navigator.xr && !isARMode) {
+        // First request camera permissions
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+        
+        // Then check if AR is supported
+        const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+        if (!isSupported) {
+          throw new Error('AR is not supported on this device');
+        }
       }
-      setIsARMode(!isARMode);
+      
+      // Toggle global AR state in store
+      toggleARMode();
+      
+      // Navigate to AR page
+      router.push('/ar');
+      
+      // Log AR state change for debugging
+      console.log('AR mode toggled to:', !isARMode);
     } catch (error) {
-      console.error('Error accessing camera:', error);
-      alert('Camera access is required for AR mode');
+      console.error('Error starting AR mode:', error);
+      alert('AR is not supported on this device or browser');
     }
     setIsARLoading(false);
   };

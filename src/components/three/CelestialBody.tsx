@@ -1,7 +1,7 @@
-import { useRef, useState, useEffect, useMemo, Suspense } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { useStore } from '../../store';
 import { CelestialBodyData } from '../../types';

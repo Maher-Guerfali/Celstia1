@@ -19,31 +19,27 @@ const Controls = () => {
     setIsARLoading(true);
     try {
       // Check if browser supports WebXR
-      if (navigator.xr && !isARMode) {
-        // First request camera permissions
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
-        
-        // Then check if AR is supported
+      if (navigator.xr) {
+        // Check if AR is supported
         const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
         if (!isSupported) {
           throw new Error('AR is not supported on this device');
         }
+        
+        // Toggle AR mode in the store
+        toggleARMode();
+        
+        // Navigate to AR page which will handle the session
+        router.push('/ar');
+      } else {
+        throw new Error('WebXR not supported in this browser');
       }
-      
-      // Toggle global AR state in store
-      toggleARMode();
-      
-      // Navigate to AR page
-      router.push('/ar');
-      
-      // Log AR state change for debugging
-      console.log('AR mode toggled to:', !isARMode);
     } catch (error) {
       console.error('Error starting AR mode:', error);
       alert('AR is not supported on this device or browser');
+    } finally {
+      setIsARLoading(false);
     }
-    setIsARLoading(false);
   };
 
   return (

@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { XR, createXRStore } from '@react-three/xr';
+import { XR, Controllers, Hands } from '@react-three/xr';
 import { Suspense } from 'react';
 import SolarSystem from './three/SolarSystem';
 import { useStore } from '../store';
-
-// Create XR store for AR session management
-const xrStore = createXRStore();
 
 const ARExperience = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,6 +26,7 @@ const ARExperience = () => {
   return (
     <div className="fixed inset-0 ar-overlay">
       <Canvas
+        shadows
         camera={{
           position: [0, 1.5, 0],
           fov: 75,
@@ -36,17 +34,17 @@ const ARExperience = () => {
           far: 1000
         }}
         className="w-full h-full"
-        shadows
       >
-        <XR store={xrStore}>
+        <XR>
           <Suspense fallback={null}>
             <ambientLight intensity={0.5} />
             <pointLight position={[0, 5, 0]} intensity={1} />
             
-            {/* VR controllers would go here if needed */}
+            <Controllers />
+            <Hands />
             
             {/* Position solar system in front of the user */}
-            <group position={[0, 0, -3]} scale={0.5}>
+            <group position={[0, -0.5, -3]} scale={0.3} rotation={[0, Math.PI / 4, 0]}>
               <SolarSystem 
                 onLoaded={handleLoaded}
                 isARMode={true}

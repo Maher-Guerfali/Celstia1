@@ -1,4 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+/* globals.css */
+.ar-overlay {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999;
+  background: transparent;
+}
+
+.ar-ui {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1rem;
+  border-radius: 8px;
+}@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -59,7 +74,106 @@ canvas {
 .cosmic-glow {
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
+/* Add these to your index.css or create a new AR.css file and import it */
 
+/* Styles for AR overlay */
+.ar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Styles for AR UI elements */
+.ar-ui {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Hide certain UI elements in AR mode */
+.ar-mode .hide-in-ar {
+  display: none;
+}
+
+/* AR button styling */
+.xr-button {
+  background-color: rgba(72, 61, 139, 0.7) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 100 !important;
+}
+
+.xr-button:hover {
+  background-color: rgba(72, 61, 139, 1) !important;
+}
+
+/* Add a class to the body when AR is active */
+body.ar-active {
+  overflow: hidden;
+}
+
+/* AR session UI */
+.ar-session-ui {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* AR placement indicator */
+.ar-placement-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid white;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* AR instructions */
+.ar-instructions {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  max-width: 80%;
+  text-align: center;
+  z-index: 100;
+  animation: fadeOut 5s forwards;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
 .planet-card {
   opacity: 0;
   transform: translateY(20px);

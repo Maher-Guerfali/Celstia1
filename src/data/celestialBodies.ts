@@ -37,20 +37,21 @@ const EARTH_RADIUS = 1;
 
 // Planet Textures (replace with your own if needed)
 const TEXTURES = {
-  sun: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  mercury: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  venus: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  earth: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  moon: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  mars: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  jupiter: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  saturn: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  uranus: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  neptune: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  pluto: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  black_hole: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480',
-  maher_station: 'https://www.shutterstock.com/shutterstock/videos/1107387031/thumb/1.jpg?ip=x480'
+  sun: '/textures/sunmap.jpg',
+  mercury: '/textures/mercurymap (1).jpg',
+  venus: '/textures/venusmap.jpg',
+  earth: '/textures/earthmap1k.jpg',
+  moon: '/textures/moon.jpg', // Add your moon texture file if available
+  mars: '/textures/mars_1k_color.jpg',
+  jupiter: '/textures/jupitermap.jpg',
+  saturn: '/textures/saturnmap.jpg',
+  uranus: '/textures/uranusmap.jpg',
+  neptune: '/textures/neptunemap.jpg',
+  pluto: '/textures/plutomap1k.jpg',
+  black_hole: '/textures/neptunemap.jpg', // Add if you have a texture for black hole
+  maher_station: '/textures/neptunemap.jpg' // Add if you have a texture for maher station
 };
+
 
 
 
